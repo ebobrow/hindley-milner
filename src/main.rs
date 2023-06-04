@@ -13,7 +13,7 @@ fn main() {
             Ok(line) => {
                 let tokens = Scanner::scan(line).unwrap();
                 let expr = Parser::parse(tokens);
-                println!("{:?}", expr);
+                println!("{:#?}", expr);
             }
             Err(_) => {
                 println!("Connection terminated");

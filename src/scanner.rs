@@ -37,7 +37,7 @@ impl Scanner {
             c => {
                 if c.is_alphabetic() {
                     let start = self.pos - 1;
-                    while matches!(self.advance(), Some(c) if !" .\\=".contains(c)) {}
+                    while matches!(self.advance(), Some(c) if !" .\\=()".contains(c)) {}
                     self.pos -= 1;
                     let ident = self.stream.get(start..self.pos)?;
                     let tok = match ident {

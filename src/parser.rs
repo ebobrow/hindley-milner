@@ -2,7 +2,7 @@ use anyhow::{anyhow, bail};
 
 use crate::scanner::Token;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Expr {
     /// x
     Var(String),
@@ -30,15 +30,15 @@ impl Parser {
     }
 
     fn expr(&mut self) -> anyhow::Result<Expr> {
+        self.do_expr(true)
+    }
+
+    fn do_expr(&mut self, recurse_app: bool) -> anyhow::Result<Expr> {
         match self.peek().ok_or_else(|| anyhow!("empty stream"))? {
             Token::Identifier(_) => {
                 let e1 = self.var()?;
-                if matches!(self.peek(), Some(Token::Identifier(_))) {
-                    let e2 = self.var()?;
-                    Ok(Expr::App {
-                        e1: Box::new(e1),
-                        e2: Box::new(e2),
-                    })
+                if recurse_app {
+                    self.maybe_app(e1)
                 } else {
                     Ok(e1)
                 }
@@ -49,7 +49,7 @@ impl Parser {
                 self.consume(&Token::LeftParen)?;
                 let e = self.expr()?;
                 self.consume(&Token::RightParen)?;
-                Ok(e)
+                self.maybe_app(e)
             }
 
             t @ (Token::In | Token::Equal | Token::Dot | Token::RightParen) => {
@@ -75,6 +75,17 @@ impl Parser {
     fn var(&mut self) -> anyhow::Result<Expr> {
         let ident = self.consume_ident()?;
         Ok(Expr::Var(ident))
+    }
+
+    fn maybe_app(&mut self, e1: Expr) -> anyhow::Result<Expr> {
+        let mut ee = Vec::new();
+        while let Ok(e) = self.do_expr(false) {
+            ee.push(e);
+        }
+        Ok(ee.iter().fold(e1, |a, b| Expr::App {
+            e1: Box::new(a),
+            e2: Box::new(b.clone()),
+        }))
     }
 
     fn abstraction(&mut self) -> anyhow::Result<Expr> {
