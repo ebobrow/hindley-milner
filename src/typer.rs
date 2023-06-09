@@ -55,6 +55,15 @@ impl Monotype {
         }
     }
 
+    fn sub(&mut self, old: &Monotype, new: &Monotype) {
+        if self == old {
+            *self = new.clone();
+        } else if let Monotype::Func(t1, t2) = self {
+            t1.sub(old, new);
+            t2.sub(old, new);
+        }
+    }
+
     fn vars(&mut self) -> Vec<&mut Ty> {
         match self {
             Monotype::Var(v) => vec![v],
@@ -137,21 +146,25 @@ impl Typer {
         Polytype { quantifiers, mono }
     }
 
-    fn unify(&mut self, a: &mut Monotype, b: &mut Monotype) {
-        // TODO: if we have unify(a->a, b->b->c) and we replace the first a with b->b we need to
-        // also replace the second a
+    fn unify(&mut self, a: &mut Monotype, b: &mut Monotype) -> (Monotype, Monotype) {
         match (a.clone(), b.clone()) {
             (Monotype::Var(Ty::Free(_)), _) => {
+                let ret = (a.clone(), b.clone());
                 *a = b.clone();
+                ret
             }
             (_, Monotype::Var(Ty::Free(_))) => {
+                let ret = (b.clone(), a.clone());
                 *b = a.clone();
+                ret
             }
             (Monotype::Func(mut a1, mut a2), Monotype::Func(mut b1, mut b2)) => {
                 self.unify(&mut a1, &mut b1);
                 self.unify(&mut a2, &mut b2);
+                let ret = (a.clone(), Monotype::Func(a1.clone(), b1.clone()));
                 *a = Monotype::Func(a1, a2);
                 *b = Monotype::Func(b1, b2);
+                ret
             }
             _ => panic!(":("),
         }
@@ -171,10 +184,10 @@ impl Typer {
         let mut t2in = self.expr(e2)?;
         let mut t2out = Monotype::Var(Ty::Free(self.newvar()));
         if let Monotype::Func(t1in, t1out) = &mut t1 {
-            self.unify(t1in, &mut t2in);
+            let (old, new) = self.unify(t1in, &mut t2in);
+            t1out.sub(&old, &new);
+            t2out.sub(&old, &new);
             self.unify(t1out, &mut t2out);
-            // t1in.unify(&mut t2in);
-            // t1out.unify(&mut t2out);
         } else {
             bail!("type error");
         }
