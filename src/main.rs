@@ -13,10 +13,9 @@ fn main() {
         let readline = rl.readline("λ ");
         match readline {
             Ok(line) => {
-                let tokens = Scanner::scan(line).unwrap();
-                let expr = Parser::parse(tokens).unwrap();
-                let ty = Typer::type_expr(expr);
-                println!("{}", ty.to_string());
+                if let Err(e) = type_line(line) {
+                    eprintln!("{}", e);
+                }
             }
             Err(_) => {
                 println!("Connection terminated");
@@ -24,4 +23,12 @@ fn main() {
             }
         }
     }
+}
+
+fn type_line(line: String) -> anyhow::Result<()> {
+    let tokens = Scanner::scan(line)?;
+    let expr = Parser::parse(tokens)?;
+    let ty = Typer::type_expr(expr);
+    println!("{}", ty?.to_string());
+    Ok(())
 }
