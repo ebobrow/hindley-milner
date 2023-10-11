@@ -146,7 +146,7 @@ impl Typer {
         Polytype { quantifiers, mono }
     }
 
-    fn unify(&mut self, a: &mut Monotype, b: &mut Monotype) -> (Monotype, Monotype) {
+    fn unify(a: &mut Monotype, b: &mut Monotype) -> (Monotype, Monotype) {
         match (a.clone(), b.clone()) {
             (Monotype::Var(Ty::Free(_)), _) => {
                 let ret = (a.clone(), b.clone());
@@ -159,8 +159,8 @@ impl Typer {
                 ret
             }
             (Monotype::Func(mut a1, mut a2), Monotype::Func(mut b1, mut b2)) => {
-                self.unify(&mut a1, &mut b1);
-                self.unify(&mut a2, &mut b2);
+                Typer::unify(&mut a1, &mut b1);
+                Typer::unify(&mut a2, &mut b2);
                 let ret = (a.clone(), Monotype::Func(a1.clone(), b1.clone()));
                 *a = Monotype::Func(a1, a2);
                 *b = Monotype::Func(b1, b2);
@@ -184,10 +184,10 @@ impl Typer {
         let mut t2in = self.expr(e2)?;
         let mut t2out = Monotype::Var(Ty::Free(self.newvar()));
         if let Monotype::Func(t1in, t1out) = &mut t1 {
-            let (old, new) = self.unify(t1in, &mut t2in);
+            let (old, new) = Typer::unify(t1in, &mut t2in);
             t1out.sub(&old, &new);
             t2out.sub(&old, &new);
-            self.unify(t1out, &mut t2out);
+            Typer::unify(t1out, &mut t2out);
         } else {
             bail!("type error");
         }
@@ -280,8 +280,7 @@ mod tests {
                 Box::new(Monotype::Var(Ty::Free(2))),
             )),
         );
-        let mut typer = Typer::default();
-        typer.unify(&mut t1, &mut t2);
-        panic!("{:#?}\n{:#?}", t1, t2);
+        Typer::unify(&mut t1, &mut t2);
+        assert_eq!(t1, t2);
     }
 }

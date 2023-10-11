@@ -49,7 +49,11 @@ impl Parser {
                 self.consume(&Token::LeftParen)?;
                 let e = self.expr()?;
                 self.consume(&Token::RightParen)?;
-                self.maybe_app(e)
+                if recurse_app {
+                    self.maybe_app(e)
+                } else {
+                    Ok(e)
+                }
             }
 
             t @ (Token::In | Token::Equal | Token::Dot | Token::RightParen) => {
